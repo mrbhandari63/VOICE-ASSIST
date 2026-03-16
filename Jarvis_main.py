@@ -1,12 +1,9 @@
-
 import pyttsx3
 import speech_recognition as sr
-import pywhatkit
-import wikipedia
-import webbrowser
+import pyaudio
 import requests
-from hugchat import hugchat
 from bs4 import BeautifulSoup
+import datetime
 
 
 # Initialize the pyttsx3 engine
@@ -15,23 +12,19 @@ engine = pyttsx3.init()
 # Set properties for the voice engine
 voices = engine.getProperty("voices")
 engine.setProperty("voice", voices[0].id)
-engine.setProperty("rate", 180)
+engine.setProperty("rate", 220)
 
 def speak(audio):
-    try:
-        engine.say(audio)
-        engine.runAndWait()
-    except Exception as e:
-        print(f"Error in speak function: {e}")
+    engine.say(audio)
+    engine.runAndWait()
 
 def takeCommand():
     r = sr.Recognizer()
     with sr.Microphone() as source:
         print("Listening...")
-        r.pause_threshold = 1
+        r.pause_threshold = 0.5
         r.energy_threshold = 300
-        audio = r.listen(source, timeout=4, phrase_time_limit=4)
-        
+        audio = r.listen(source, timeout=3, phrase_time_limit=3)
     try:
         print("Understanding...")
         query = r.recognize_google(audio, language='en-in')
@@ -44,45 +37,88 @@ def takeCommand():
         return "None"
     return query
 
-def searchGoogle(query):
-    query = query.replace("jarvis", "").replace("google search", "").replace("google", "").strip()
-    speak("This is what I found on Google.")
-    try:
-        pywhatkit.search(query)
-        result = wikipedia.summary(query, sentences=1)
-        speak(result)
-    except Exception as e:
-        print(f"Error: {e}")
-        speak("No speakable output is available.")
+def normalize_text(text):
+    # Normalize common variations
+    text = text.lower()
+    replacements = {
+        "how r u": "how are you",
+        "i m fine": "i am fine",
+        "thank u": "thank you"
+    }
+    for original, replacement in replacements.items():
+        text = text.replace(original, replacement)
+    return text
 
-def searchYoutube(query):
-    query = query.replace("youtube search", "").replace("youtube", "").replace("jarvis", "").strip()
-    speak("This is what I found for your search!")
-    web = "https://www.youtube.com/results?search_query=" + query
-    webbrowser.open(web)
-    pywhatkit.playonyt(query)
-    speak("Done, sir!")
+if __name__ == "__main__":
+    engine.say("Hello sir, my name is Jarvis")
+    engine.runAndWait()
 
-def searchWikipedia(query):
-    query = query.replace("wikipedia", "").replace("search wikipedia", "").replace("jarvis", "").strip()
-    speak("Searching from Wikipedia...")
-    try:
-        results = wikipedia.summary(query, sentences=2)
-        speak("According to Wikipedia...")
-        print(results)
-        speak(results)
-    except wikipedia.exceptions.DisambiguationError as e:
-        print(f"Error: {e}")
-        speak("The query is ambiguous, please be more specific.")
-    except Exception as e:
-        print(f"Error: {e}")
-        speak("An error occurred while searching Wikipedia.")
-def chatBot(query):
-    user_input= query.lower();
-    chatbot=hugchat.ChatBot(cookie_path=r"C:\Users\ADMIN\OneDrive - Graphic Era University\Desktop\pro\cookies.json")
-    id= chatbot.new_conversation()
-    chatbot.change_conversation(id)
-    response=chatbot.chat(user_input)
-    speak(response)
-    print(response)    
+    while True:
+        query = takeCommand().lower()
+        if query is None:
+            continue
+        
+        query = normalize_text(query)
+        
+        if "wake up" in query:
+            try:
+                from Greet_me import greetMe
+                greetMe()
+            except ImportError:
+                print("Module Greet_me not found. Please ensure it is available.")
+                speak("Module Greet_me not found. Please ensure it is available.")
 
+            while True:
+                query = takeCommand().lower()
+                if query is None:
+                    continue
+                
+                query = normalize_text(query)
+                
+                if "go to sleep" in query:
+                    speak("Ok sir, You can call me anytime")
+                    break
+
+                elif "hello" in query:
+                    speak("Hello sir, how are you?")
+
+                elif "i am fine" in query:
+                    speak("That is great, sir")
+
+                elif "how are you" in query:
+                    speak("Perfect, sir")
+
+                elif "thank you" in query:
+                    speak("You are welcome, sir")
+                
+                # elif "open" in query:
+                    
+                
+                elif "google" in query:
+                    from SearchNow import searchGoogle
+                    searchGoogle(query)
+                elif "youtube" in query:
+                    from SearchNow import searchYoutube
+                    searchYoutube(query)
+                elif "wikipedia" in query:
+                    from SearchNow import searchWikipedia
+                    searchWikipedia(query)
+                elif "temperature" in query or "weather" in query:
+                    search = "temprature in Nainital(Uttarakhand)"
+                    url = f"https://www.google.com/search?q={search}"
+                    r=requests.get(url)
+                    data = BeautifulSoup(r.text,"html.parser")
+                    temp= data.find("div",class_= "BNeawe").text
+                    speak(f"current{search} is {temp}")
+                elif "time" in query:
+                    strTime= datetime.datetime.now().strftime("%H:%M")
+                    speak(f"sir, the time is{strTime}")
+                
+                elif "finally sleep" in query:
+                    speak("I am going to sleep")
+                    exit()
+                else:
+                    from SearchNow import chatBot
+                    chatBot(query)
+                
+                    
